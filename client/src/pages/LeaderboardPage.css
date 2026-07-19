@@ -13,8 +13,15 @@
   color: var(--muted);
 }
 
+.leaderboard__scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .leaderboard__table {
   width: 100%;
+  min-width: 280px;
   border-collapse: collapse;
   font-size: 1.02rem;
 }
@@ -24,6 +31,13 @@
   text-align: left;
   padding: 0.85rem 0.5rem;
   border-bottom: 1px solid color-mix(in srgb, var(--cocoa) 18%, transparent);
+}
+
+.leaderboard__table td:nth-child(2) {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .leaderboard__table th {
@@ -47,4 +61,19 @@
 
 .leaderboard__empty {
   color: var(--muted);
+}
+
+@media (max-width: 480px) {
+  .leaderboard__header {
+    margin: 1rem 0 1.35rem;
+  }
+
+  .leaderboard__table {
+    font-size: 0.95rem;
+  }
+
+  .leaderboard__table th,
+  .leaderboard__table td {
+    padding: 0.7rem 0.4rem;
+  }
 }

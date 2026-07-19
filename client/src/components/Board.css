@@ -2,10 +2,11 @@
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   grid-template-rows: repeat(5, 1fr);
-  width: min(92vw, 440px);
+  width: 100%;
+  max-width: var(--board-max);
   aspect-ratio: 1;
-  gap: 3px;
-  padding: 10px;
+  gap: clamp(2px, 0.8vw, 3px);
+  padding: clamp(6px, 2vw, 10px);
   background: linear-gradient(
     145deg,
     color-mix(in srgb, var(--cocoa) 92%, black),
@@ -16,6 +17,7 @@
     0 20px 50px color-mix(in srgb, var(--cocoa) 35%, transparent),
     inset 0 1px 0 color-mix(in srgb, white 12%, transparent);
   animation: piece-in 0.45s ease both;
+  touch-action: manipulation;
 }
 
 .board__cell {
@@ -26,6 +28,7 @@
   place-items: center;
   border-radius: 2px;
   transition: filter 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .board__cell--light {
@@ -56,8 +59,8 @@
 }
 
 .board__dot {
-  width: 14px;
-  height: 14px;
+  width: clamp(10px, 3.5vw, 14px);
+  height: clamp(10px, 3.5vw, 14px);
   border-radius: 50%;
   background: color-mix(in srgb, var(--terracotta) 75%, transparent);
 }
@@ -68,7 +71,7 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
-  font-size: 0.85rem;
+  font-size: clamp(0.65rem, 2.5vw, 0.85rem);
   color: color-mix(in srgb, var(--sand) 90%, white);
   box-shadow:
     0 4px 10px color-mix(in srgb, black 28%, transparent),
@@ -97,10 +100,4 @@
 .piece--dame {
   border: 2px solid color-mix(in srgb, var(--sand) 80%, white);
   animation: capture-flash 0.5s ease;
-}
-
-@media (max-width: 520px) {
-  .board {
-    width: min(94vw, 360px);
-  }
 }

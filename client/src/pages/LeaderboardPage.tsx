@@ -52,28 +52,30 @@ export default function LeaderboardPage() {
       )}
 
       {players.length > 0 && (
-        <table className="leaderboard__table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Joueur</th>
-              <th>V</th>
-              <th>D</th>
-              <th>Ratio</th>
-            </tr>
-          </thead>
-          <tbody>
-            {players.map((p, i) => (
-              <tr key={p.name}>
-                <td>{i + 1}</td>
-                <td>{p.name}</td>
-                <td>{p.wins}</td>
-                <td>{p.losses}</td>
-                <td>{Math.round(p.ratio * 100)}%</td>
+        <div className="leaderboard__scroll">
+          <table className="leaderboard__table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Joueur</th>
+                <th>V</th>
+                <th>D</th>
+                <th>Ratio</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {players.map((p, i) => (
+                <tr key={p.name}>
+                  <td>{i + 1}</td>
+                  <td>{p.name}</td>
+                  <td>{p.wins}</td>
+                  <td>{p.losses}</td>
+                  <td>{Math.round(p.ratio * 100)}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </main>
   );

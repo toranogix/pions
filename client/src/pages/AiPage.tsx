@@ -81,6 +81,17 @@ export default function AiPage() {
     }
   }
 
+  function handleForfeit() {
+    if (state.winner) return;
+    setThinking(false);
+    setSelected(null);
+    setState((prev) =>
+      prev.winner
+        ? prev
+        : { ...prev, winner: AI, chainFrom: null, lastJumpDir: null },
+    );
+  }
+
   // AI turn
   useEffect(() => {
     if (!started || state.winner || state.turn !== AI) return;
@@ -179,12 +190,14 @@ export default function AiPage() {
             you={HUMAN}
             clocks={clocks}
             // statusExtra={thinking ? "L’ordi réfléchit…" : undefined}
+            onForfeit={!state.winner ? handleForfeit : undefined}
             onNewGame={newGame}
             onEndChain={canPlay && state.chainFrom ? handleEndChain : undefined}
           />
           <Board
             state={state}
             interactive={canPlay}
+            perspective={HUMAN}
             selected={selected}
             onSelect={setSelected}
             onMove={handleMove}

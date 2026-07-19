@@ -1,5 +1,7 @@
+import { useState } from "react";
 import type { GameState, Player } from "@12pions/shared";
 import { formatClock, type Clocks } from "../hooks/useTurnClock";
+import ConfirmModal from "./ConfirmModal";
 import VictoryModal from "./VictoryModal";
 import "./GameChrome.css";
 
@@ -33,7 +35,11 @@ export default function GameChrome({
   onRematchOnline,
   onEndChain,
 }: GameChromeProps) {
+  const [confirmForfeit, setConfirmForfeit] = useState(false);
   const hasClocks = clocks != null;
+  // Opponent first so it sits above (mobile) / left of your strip
+  const sideOrder: Player[] =
+    you === "north" ? ["south", "north"] : ["north", "south"];
 
   function renderPlayer(side: Player, name: string) {
     const active = state.turn === side && !state.winner;
@@ -67,18 +73,21 @@ export default function GameChrome({
     );
   }
 
+  function confirmAbandon() {
+    setConfirmForfeit(false);
+    onForfeit?.();
+  }
+
   return (
     <div className="chrome">
       <div className="chrome__players">
-        {renderPlayer("north", northName)}
-        {renderPlayer("south", southName)}
+        {sideOrder.map((side) =>
+          renderPlayer(side, side === "south" ? southName : northName),
+        )}
       </div>
 
-      {(status || statusExtra) && !state.winner && (
-        <p className="chrome__status">
-          {status}
-          {status && statusExtra ? ` · ${statusExtra}` : statusExtra ?? ""}
-        </p>
+      {statusExtra && !state.winner && (
+        <p className="chrome__status">{statusExtra}</p>
       )}
 
       <div className="chrome__actions">
@@ -88,11 +97,26 @@ export default function GameChrome({
           </button>
         )}
         {onForfeit && !state.winner && (
-          <button type="button" className="btn btn--secondary" onClick={onForfeit}>
-            Abandonner
+          <button
+            type="button"
+            className="btn btn--secondary"
+            onClick={() => setConfirmForfeit(true)}
+          >
+            Abandonner la partie
           </button>
         )}
       </div>
+
+      {confirmForfeit && !state.winner && (
+        <ConfirmModal
+          title="Abandonner la partie ?"
+          message="Voulez-vous vraiment abandonner ? Cette action est définitive."
+          confirmLabel="Abandonner"
+          cancelLabel="Annuler"
+          onConfirm={confirmAbandon}
+          onCancel={() => setConfirmForfeit(false)}
+        />
+      )}
 
       {state.winner && (
         <VictoryModal

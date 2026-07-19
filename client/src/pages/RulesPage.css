@@ -20,7 +20,7 @@
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  max-width: 52ch;
+  max-width: min(52ch, 100%);
 }
 
 .rules__list li {
@@ -47,4 +47,19 @@
 .rules__list strong {
   font-family: var(--font-display);
   font-weight: 600;
+}
+
+@media (max-width: 480px) {
+  .rules__header {
+    margin: 1rem 0 1.35rem;
+  }
+
+  .rules__list {
+    gap: 1.1rem;
+  }
+
+  .rules__list li {
+    padding-left: 1.5rem;
+    font-size: 0.98rem;
+  }
 }

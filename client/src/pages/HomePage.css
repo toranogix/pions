@@ -1,9 +1,11 @@
 .home {
   position: relative;
   min-height: calc(100vh - 4rem);
+  min-height: calc(100dvh - 4rem);
   display: grid;
   place-items: center;
   overflow: hidden;
+  padding-inline: max(0px, var(--safe-left)) max(0px, var(--safe-right));
 }
 
 .home__atmosphere {
@@ -46,8 +48,8 @@
 .home__hero {
   position: relative;
   z-index: 1;
-  width: min(720px, calc(100% - 2.5rem));
-  padding: 2rem 0 4rem;
+  width: min(720px, calc(100% - 2 * var(--page-pad)));
+  padding: 2rem 0 max(3rem, calc(2rem + var(--safe-bottom)));
   text-align: left;
 }
 
@@ -87,6 +89,19 @@
 }
 
 @media (max-width: 600px) {
+  .home {
+    overflow: visible;
+    align-content: center;
+  }
+
+  .home__brand {
+    font-size: clamp(2.6rem, 16vw, 4rem);
+  }
+
+  .home__lede {
+    font-size: 1rem;
+  }
+
   .home__ctas {
     flex-direction: column;
     align-items: stretch;

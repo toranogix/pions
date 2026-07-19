@@ -15,6 +15,7 @@ interface BoardProps {
 export default function Board({
   state,
   interactive = true,
+  perspective = "south",
   selected,
   onSelect,
   onMove,
@@ -22,6 +23,15 @@ export default function Board({
 }: BoardProps) {
   const legal: Move[] =
     selected && interactive ? getMovesForPiece(state, selected) : [];
+
+  // Own side at the bottom: north players see the board rotated 180°
+  const flip = perspective === "north";
+  const rowOrder = Array.from({ length: BOARD_SIZE }, (_, i) =>
+    flip ? BOARD_SIZE - 1 - i : i,
+  );
+  const colOrder = Array.from({ length: BOARD_SIZE }, (_, i) =>
+    flip ? BOARD_SIZE - 1 - i : i,
+  );
 
   const isLegalTarget = (pos: Position) =>
     legal.some((m) => samePos(m.to, pos));
@@ -55,8 +65,8 @@ export default function Board({
 
   return (
     <div className="board" role="grid" aria-label="Plateau 12 Pions">
-      {Array.from({ length: BOARD_SIZE }, (_, row) =>
-        Array.from({ length: BOARD_SIZE }, (_, col) => {
+      {rowOrder.map((row) =>
+        colOrder.map((col) => {
           const piece = state.board[row][col];
           const pos = { row, col };
           const selectedHere = selected && samePos(selected, pos);

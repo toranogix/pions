@@ -14,6 +14,13 @@
   --font-display: "Serge Sans", Georgia, serif;
   --font-body: "Source Sans 3", system-ui, sans-serif;
 
+  --page-pad: clamp(0.85rem, 3.5vw, 1.5rem);
+  --board-max: 440px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+
   color: var(--text);
   background: var(--bg);
   font-family: var(--font-body);
@@ -37,12 +44,23 @@ body,
   margin: 0;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   background:
     radial-gradient(ellipse 90% 60% at 15% 10%, color-mix(in srgb, var(--clay) 55%, transparent), transparent 55%),
     radial-gradient(ellipse 70% 50% at 90% 80%, color-mix(in srgb, var(--terracotta) 28%, transparent), transparent 50%),
     linear-gradient(165deg, #d2cbbf 0%, var(--sand) 40%, #b7aea0 100%);
   background-attachment: fixed;
+  overflow-x: hidden;
+}
+
+@media (max-width: 720px) {
+  body {
+    background-attachment: scroll;
+  }
 }
 
 a {
@@ -68,7 +86,11 @@ h3 {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1rem 1.5rem;
+  padding:
+    max(0.85rem, var(--safe-top))
+    max(var(--page-pad), var(--safe-right))
+    0.85rem
+    max(var(--page-pad), var(--safe-left));
   position: relative;
   z-index: 2;
 }
@@ -78,11 +100,14 @@ h3 {
   font-size: 1.15rem;
   font-weight: 700;
   letter-spacing: 0.02em;
+  flex-shrink: 0;
 }
 
 .site-nav__links {
   display: flex;
-  gap: 1.25rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.65rem 1.25rem;
   font-size: 0.95rem;
   font-weight: 600;
 }
@@ -90,12 +115,28 @@ h3 {
 .site-nav__links a {
   opacity: 0.85;
   transition: opacity 0.2s ease;
+  white-space: nowrap;
 }
 
 .site-nav__links a:hover,
 .site-nav__links a.active {
   opacity: 1;
   color: var(--deep);
+}
+
+@media (max-width: 560px) {
+  .site-nav {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.65rem;
+  }
+
+  .site-nav__links {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 0.5rem 1rem;
+    font-size: 0.88rem;
+  }
 }
 
 .btn {
@@ -153,9 +194,16 @@ h3 {
 }
 
 .page {
-  width: min(1100px, calc(100% - 2rem));
+  width: min(1100px, calc(100% - 2 * var(--page-pad)));
   margin: 0 auto;
-  padding-bottom: 3rem;
+  padding-bottom: max(3rem, calc(2rem + var(--safe-bottom)));
+}
+
+@media (max-width: 480px) {
+  .btn {
+    padding: 0.75rem 1.15rem;
+    font-size: 0.95rem;
+  }
 }
 
 .field {

@@ -1,7 +1,7 @@
-.victory {
+.confirm {
   position: fixed;
   inset: 0;
-  z-index: 80;
+  z-index: 70;
   display: grid;
   place-items: center;
   padding:
@@ -9,31 +9,24 @@
     max(1.25rem, var(--safe-right))
     max(1.25rem, var(--safe-bottom))
     max(1.25rem, var(--safe-left));
-  animation: victory-in 0.35s ease both;
+  animation: confirm-in 0.28s ease both;
 }
 
-.victory__confetti {
+.confirm__backdrop {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 2;
-}
-
-.victory__backdrop {
-  position: absolute;
-  inset: 0;
+  border: none;
+  padding: 0;
   background: color-mix(in srgb, var(--cocoa) 42%, transparent);
   backdrop-filter: blur(3px);
-  z-index: 1;
+  cursor: pointer;
 }
 
-.victory__card {
+.confirm__card {
   position: relative;
-  z-index: 3;
-  width: min(100%, 400px);
-  padding: 1.75rem 1.5rem 1.5rem;
+  z-index: 1;
+  width: min(100%, 360px);
+  padding: 1.6rem 1.4rem 1.35rem;
   text-align: center;
   background:
     linear-gradient(
@@ -44,10 +37,10 @@
   border: 1px solid color-mix(in srgb, var(--cocoa) 18%, transparent);
   border-radius: 4px;
   box-shadow: 0 24px 60px color-mix(in srgb, var(--cocoa) 35%, transparent);
-  animation: victory-card 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: confirm-card 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.victory__eyebrow {
+.confirm__eyebrow {
   margin: 0 0 0.35rem;
   font-size: 0.8rem;
   font-weight: 600;
@@ -56,35 +49,36 @@
   color: var(--muted);
 }
 
-.victory__card h2 {
+.confirm__card h2 {
   margin: 0;
-  font-size: clamp(1.8rem, 5vw, 2.35rem);
+  font-size: clamp(1.35rem, 4vw, 1.65rem);
   color: var(--deep);
-  line-height: 1.15;
+  line-height: 1.2;
 }
 
-.victory__card--win h2 {
-  color: var(--terracotta);
-}
-
-.victory__subtitle {
+.confirm__message {
   margin: 0.65rem 0 0;
   color: var(--muted);
   font-size: 1rem;
 }
 
-.victory__actions {
+.confirm__actions {
   display: flex;
-  flex-direction: column;
   gap: 0.65rem;
-  margin-top: 1.4rem;
+  margin-top: 1.35rem;
 }
 
-.victory__actions .btn {
-  width: 100%;
+.confirm__actions .btn {
+  flex: 1;
 }
 
-@keyframes victory-in {
+@media (max-width: 360px) {
+  .confirm__actions {
+    flex-direction: column;
+  }
+}
+
+@keyframes confirm-in {
   from {
     opacity: 0;
   }
@@ -93,10 +87,10 @@
   }
 }
 
-@keyframes victory-card {
+@keyframes confirm-card {
   from {
     opacity: 0;
-    transform: translateY(16px) scale(0.96);
+    transform: translateY(12px) scale(0.97);
   }
   to {
     opacity: 1;

@@ -233,13 +233,14 @@ export default function OnlinePage() {
             you={you}
             clocks={clocks}
             statusExtra={statusExtra}
-            onForfeit={canPlay ? handleForfeit : undefined}
+            onForfeit={you && !state.winner ? handleForfeit : undefined}
             onRematchOnline={rematchOnline}
             onEndChain={canPlay && state.chainFrom ? handleEndChain : undefined}
           />
           <Board
             state={state}
             interactive={canPlay}
+            perspective={you ?? "south"}
             selected={selected}
             onSelect={setSelected}
             onMove={handleMove}
