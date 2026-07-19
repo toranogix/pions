@@ -331,6 +331,11 @@ export function applyMove(state: GameState, move: Move): GameState {
 
   if (countPieces(board, opponent(state.turn)) === 0) {
     winner = state.turn;
+  } else if (
+    countPieces(board, "south") === 1 &&
+    countPieces(board, "north") === 1
+  ) {
+    winner = "draw";
   } else if (movesWithoutCapture >= DRAW_MOVE_LIMIT) {
     winner = "draw";
   } else if (!chainFrom) {

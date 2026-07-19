@@ -34,6 +34,10 @@ export default function RulesPage() {
           <strong>Victoire.</strong> Capturez tous les pions adverses, ou
           laissez l’adversaire sans coup légal.
         </li>
+        <li>
+          <strong>Partie nulle.</strong> S’il ne reste qu’un seul pion pour
+          chaque camp, la partie est déclarée nulle.
+        </li>
       </ol>
     </main>
   );
