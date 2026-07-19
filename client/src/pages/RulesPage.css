@@ -1,0 +1,50 @@
+.rules__header {
+  margin: 1.5rem 0 1.75rem;
+}
+
+.rules__header h1 {
+  font-size: clamp(2rem, 5vw, 2.8rem);
+  color: var(--deep);
+  margin-bottom: 0.35rem;
+}
+
+.rules__header p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.rules__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 52ch;
+}
+
+.rules__list li {
+  padding-left: 1.75rem;
+  position: relative;
+  color: var(--cocoa);
+}
+
+.rules__list li::before {
+  counter-increment: rule;
+  content: counter(rule);
+  position: absolute;
+  left: 0;
+  top: 0.1rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--terracotta);
+}
+
+.rules__list {
+  counter-reset: rule;
+}
+
+.rules__list strong {
+  font-family: var(--font-display);
+  font-weight: 600;
+}

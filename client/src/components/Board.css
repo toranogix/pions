@@ -1,0 +1,106 @@
+.board {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(5, 1fr);
+  width: min(92vw, 440px);
+  aspect-ratio: 1;
+  gap: 3px;
+  padding: 10px;
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--cocoa) 92%, black),
+    var(--cocoa)
+  );
+  border-radius: 4px;
+  box-shadow:
+    0 20px 50px color-mix(in srgb, var(--cocoa) 35%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 12%, transparent);
+  animation: piece-in 0.45s ease both;
+}
+
+.board__cell {
+  position: relative;
+  border: none;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 2px;
+  transition: filter 0.15s ease;
+}
+
+.board__cell--light {
+  background: color-mix(in srgb, var(--sand) 88%, white);
+}
+
+.board__cell--dark {
+  background: color-mix(in srgb, var(--clay) 85%, var(--cocoa));
+}
+
+.board__cell:not(:disabled):hover {
+  filter: brightness(1.06);
+}
+
+.board__cell--selected {
+  outline: 2px solid var(--terracotta);
+  outline-offset: -2px;
+  z-index: 1;
+}
+
+.board__cell--target {
+  animation: pulse-cell 1.4s ease infinite;
+}
+
+.board__cell--chain {
+  outline: 2px dashed var(--deep);
+  outline-offset: -2px;
+}
+
+.board__dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--terracotta) 75%, transparent);
+}
+
+.piece {
+  width: 68%;
+  height: 68%;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.85rem;
+  color: color-mix(in srgb, var(--sand) 90%, white);
+  box-shadow:
+    0 4px 10px color-mix(in srgb, black 28%, transparent),
+    inset 0 2px 3px color-mix(in srgb, white 25%, transparent);
+  animation: piece-in 0.35s ease both;
+}
+
+.piece--south {
+  background: radial-gradient(
+    circle at 35% 30%,
+    color-mix(in srgb, var(--terracotta) 70%, white),
+    var(--terracotta) 55%,
+    color-mix(in srgb, var(--terracotta) 70%, black)
+  );
+}
+
+.piece--north {
+  background: radial-gradient(
+    circle at 35% 30%,
+    color-mix(in srgb, var(--burgundy) 65%, white),
+    var(--burgundy) 55%,
+    color-mix(in srgb, var(--burgundy) 65%, black)
+  );
+}
+
+.piece--dame {
+  border: 2px solid color-mix(in srgb, var(--sand) 80%, white);
+  animation: capture-flash 0.5s ease;
+}
+
+@media (max-width: 520px) {
+  .board {
+    width: min(94vw, 360px);
+  }
+}

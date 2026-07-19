@@ -1,0 +1,94 @@
+.home {
+  position: relative;
+  min-height: calc(100vh - 4rem);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.home__atmosphere {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      180deg,
+      transparent 0%,
+      color-mix(in srgb, var(--sand) 40%, transparent) 70%,
+      color-mix(in srgb, var(--cocoa) 35%, transparent) 100%
+    ),
+    radial-gradient(
+      ellipse 120% 80% at 50% 100%,
+      color-mix(in srgb, var(--burgundy) 45%, transparent),
+      transparent 60%
+    ),
+    repeating-linear-gradient(
+      -12deg,
+      transparent,
+      transparent 18px,
+      color-mix(in srgb, var(--clay) 18%, transparent) 18px,
+      color-mix(in srgb, var(--clay) 18%, transparent) 19px
+    );
+  pointer-events: none;
+  animation: atmosphere-drift 18s ease-in-out infinite alternate;
+}
+
+@keyframes atmosphere-drift {
+  from {
+    transform: scale(1) translateY(0);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(1.04) translateY(-12px);
+    opacity: 1;
+  }
+}
+
+.home__hero {
+  position: relative;
+  z-index: 1;
+  width: min(720px, calc(100% - 2.5rem));
+  padding: 2rem 0 4rem;
+  text-align: left;
+}
+
+.home__brand {
+  margin: 0 0 1rem;
+  font-family: var(--font-display);
+  font-size: clamp(3.2rem, 10vw, 5.8rem);
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  color: var(--deep);
+  animation: piece-in 0.7s ease both;
+}
+
+.home__title {
+  margin: 0 0 0.85rem;
+  font-size: clamp(1.35rem, 3.5vw, 1.85rem);
+  font-weight: 500;
+  max-width: 18ch;
+  animation: piece-in 0.7s ease 0.08s both;
+}
+
+.home__lede {
+  margin: 0 0 1.75rem;
+  max-width: 36ch;
+  font-size: 1.08rem;
+  color: var(--muted);
+  animation: piece-in 0.7s ease 0.16s both;
+}
+
+.home__ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  animation: piece-in 0.7s ease 0.24s both;
+}
+
+@media (max-width: 600px) {
+  .home__ctas {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
