@@ -20,8 +20,57 @@
 .play__layout {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: 1.25rem;
+}
+
+.play__time {
+  border: none;
+  padding: 0;
+  margin: 0 0 1rem;
+}
+
+.play__time legend {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.4rem;
+  padding: 0;
+}
+
+.play__time-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.play__time-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 0.85rem;
+  border: 1.5px solid color-mix(in srgb, var(--cocoa) 30%, transparent);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--sand) 70%, white);
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.play__time-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.play__time-option.is-selected {
+  border-color: var(--terracotta);
+  background: color-mix(in srgb, var(--terracotta) 18%, var(--sand));
+  color: var(--deep);
+}
+
+.play__time-option:hover {
+  border-color: var(--terracotta);
 }
 
 .play__queue {

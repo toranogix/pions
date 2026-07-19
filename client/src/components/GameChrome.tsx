@@ -1,4 +1,6 @@
 import type { GameState, Player } from "@12pions/shared";
+import { formatClock, type Clocks } from "../hooks/useTurnClock";
+import VictoryModal from "./VictoryModal";
 import "./GameChrome.css";
 
 interface GameChromeProps {
@@ -6,9 +8,11 @@ interface GameChromeProps {
   southName: string;
   northName: string;
   you?: Player | null;
+  clocks?: Clocks | null;
   statusExtra?: string;
   onForfeit?: () => void;
   onNewGame?: () => void;
+  onRematchOnline?: () => void;
   onEndChain?: () => void;
 }
 
@@ -22,55 +26,60 @@ export default function GameChrome({
   southName,
   northName,
   you = null,
+  clocks = null,
   statusExtra,
   onForfeit,
   onNewGame,
+  onRematchOnline,
   onEndChain,
 }: GameChromeProps) {
-  let status = "";
-  if (state.winner === "draw") {
-    status = "Partie nulle";
-  } else if (state.winner) {
-    const name = state.winner === "south" ? southName : northName;
-    status = `${name} a gagné`;
-  } else if (state.chainFrom) {
-    status = "Prise en chaîne — continuez ou terminez votre tour";
-  } else {
-    const name = state.turn === "south" ? southName : northName;
-    status = `Tour de ${name}`;
+  const hasClocks = clocks != null;
+
+  function renderPlayer(side: Player, name: string) {
+    const active = state.turn === side && !state.winner;
+    const low =
+      hasClocks && clocks[side] <= 30_000 && clocks[side] > 0 && active;
+    const empty = hasClocks && clocks[side] <= 0;
+
+    return (
+      <div
+        className={`chrome__player chrome__player--${side} ${
+          active ? "is-active" : ""
+        } ${low ? "is-low" : ""} ${empty ? "is-flag" : ""}`}
+      >
+        <span className={`chrome__swatch chrome__swatch--${side}`} />
+        <div className="chrome__player-meta">
+          <strong>{name}</strong>
+          <small>
+            {sideLabel(side, you)} · capturés {state.captured[side]}
+          </small>
+        </div>
+        {hasClocks && (
+          <time
+            className={`chrome__clock ${active ? "is-ticking" : ""}`}
+            dateTime={`PT${Math.ceil(clocks[side] / 1000)}S`}
+            aria-label={`Temps restant ${name}`}
+          >
+            {formatClock(clocks[side])}
+          </time>
+        )}
+      </div>
+    );
   }
 
   return (
     <div className="chrome">
       <div className="chrome__players">
-        <div
-          className={`chrome__player chrome__player--north ${
-            state.turn === "north" && !state.winner ? "is-active" : ""
-          }`}
-        >
-          <span className="chrome__swatch chrome__swatch--north" />
-          <div>
-            <strong>{northName}</strong>
-            <small>{sideLabel("north", you)} · capturés {state.captured.north}</small>
-          </div>
-        </div>
-        <div
-          className={`chrome__player chrome__player--south ${
-            state.turn === "south" && !state.winner ? "is-active" : ""
-          }`}
-        >
-          <span className="chrome__swatch chrome__swatch--south" />
-          <div>
-            <strong>{southName}</strong>
-            <small>{sideLabel("south", you)} · capturés {state.captured.south}</small>
-          </div>
-        </div>
+        {renderPlayer("north", northName)}
+        {renderPlayer("south", southName)}
       </div>
 
-      <p className="chrome__status">
-        {status}
-        {statusExtra ? ` · ${statusExtra}` : ""}
-      </p>
+      {(status || statusExtra) && !state.winner && (
+        <p className="chrome__status">
+          {status}
+          {status && statusExtra ? ` · ${statusExtra}` : statusExtra ?? ""}
+        </p>
+      )}
 
       <div className="chrome__actions">
         {onEndChain && state.chainFrom && !state.winner && (
@@ -83,12 +92,18 @@ export default function GameChrome({
             Abandonner
           </button>
         )}
-        {onNewGame && state.winner && (
-          <button type="button" className="btn btn--primary" onClick={onNewGame}>
-            Nouvelle partie
-          </button>
-        )}
       </div>
+
+      {state.winner && (
+        <VictoryModal
+          winner={state.winner}
+          southName={southName}
+          northName={northName}
+          you={you}
+          onRematchAi={onNewGame}
+          onRematchOnline={onRematchOnline}
+        />
+      )}
     </div>
   );
 }

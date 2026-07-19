@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { apiUrl } from "../config";
 import "./LeaderboardPage.css";
 
 interface Entry {
@@ -17,7 +18,7 @@ export default function LeaderboardPage() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/leaderboard");
+        const res = await fetch(apiUrl("/api/leaderboard"));
         if (!res.ok) throw new Error("Impossible de charger le classement");
         const data = (await res.json()) as { players: Entry[] };
         if (!cancelled) setPlayers(data.players);

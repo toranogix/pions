@@ -187,12 +187,13 @@ function captureMoves(
     return moves;
   }
 
-  // Dame: all orthogonal directions (may retreat)
+  // Dame: all orthogonal directions (may retreat). After the captured piece,
+  // she may land on any empty square beyond it until blocked
   for (const d of ORTHO) {
     if (isReverse(d, lastJumpDir)) continue;
     let r = from.row + d.row;
     let c = from.col + d.col;
-    // Slide over empty squares until we hit an enemy piece
+    // Slide over empty squares until we hit a piece
     while (inBounds(r, c) && board[r][c] === null) {
       r += d.row;
       c += d.col;
@@ -200,15 +201,18 @@ function captureMoves(
     if (!inBounds(r, c)) continue;
     const mid = board[r][c];
     if (!mid || mid.player !== enemy) continue;
-    const landR = r + d.row;
-    const landC = c + d.col;
-    if (!inBounds(landR, landC)) continue;
-    if (board[landR][landC] !== null) continue;
-    moves.push({
-      from,
-      to: { row: landR, col: landC },
-      capture: { row: r, col: c },
-    });
+    // Land on any empty square past the captured piece
+    let landR = r + d.row;
+    let landC = c + d.col;
+    while (inBounds(landR, landC) && board[landR][landC] === null) {
+      moves.push({
+        from,
+        to: { row: landR, col: landC },
+        capture: { row: r, col: c },
+      });
+      landR += d.row;
+      landC += d.col;
+    }
   }
   return moves;
 }

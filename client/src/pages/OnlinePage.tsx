@@ -3,6 +3,8 @@ import { io, type Socket } from "socket.io-client";
 import type { GameState, Player, Position } from "@12pions/shared";
 import Board from "../components/Board";
 import GameChrome from "../components/GameChrome";
+import { serverUrl } from "../config";
+import { TIME_CONTROLS, useSyncedClocks, type Clocks } from "../hooks/useTurnClock";
 import "./PlayPage.css";
 
 type Phase = "form" | "queue" | "game";
@@ -18,10 +20,13 @@ interface RoomPayload {
   players: RoomPlayer[];
   you?: Player;
   disconnected?: string;
+  clocks?: Clocks | null;
+  timeControlMs?: number | null;
 }
 
 export default function OnlinePage() {
   const [name, setName] = useState(() => localStorage.getItem("12pions:name") ?? "");
+  const [timeControlMs, setTimeControlMs] = useState<number | null>(3 * 60 * 1000);
   const [phase, setPhase] = useState<Phase>("form");
   const [you, setYou] = useState<Player | null>(null);
   const [state, setState] = useState<GameState | null>(null);
@@ -29,6 +34,8 @@ export default function OnlinePage() {
   const [selected, setSelected] = useState<Position | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [statusExtra, setStatusExtra] = useState<string | undefined>();
+  const [serverClocks, setServerClocks] = useState<Clocks | null>(null);
+  const [clockSync, setClockSync] = useState(0);
   const socketRef = useRef<Socket | null>(null);
   const youRef = useRef<Player | null>(null);
 
@@ -41,12 +48,32 @@ export default function OnlinePage() {
     [players],
   );
 
+  const clocks = useSyncedClocks({
+    serverClocks,
+    turn: state?.turn ?? "south",
+    running: phase === "game" && !!state && !state.winner && serverClocks != null,
+    syncKey: clockSync,
+  });
+
   const cleanupSocket = useCallback(() => {
     socketRef.current?.disconnect();
     socketRef.current = null;
   }, []);
 
   useEffect(() => () => cleanupSocket(), [cleanupSocket]);
+
+  function applyRoom(payload: RoomPayload) {
+    setState(payload.state);
+    setPlayers(payload.players);
+    setServerClocks(payload.clocks ?? null);
+    setClockSync((n) => n + 1);
+    const side = youRef.current;
+    setSelected(
+      payload.state.chainFrom && side && payload.state.turn === side
+        ? payload.state.chainFrom
+        : null,
+    );
+  }
 
   function joinQueue(e: React.FormEvent) {
     e.preventDefault();
@@ -55,9 +82,10 @@ export default function OnlinePage() {
     setName(trimmed);
     setError(null);
     setStatusExtra(undefined);
+    setServerClocks(null);
 
     cleanupSocket();
-    const socket = io({
+    const socket = io(serverUrl || undefined, {
       path: "/socket.io",
       transports: ["websocket", "polling"],
     });
@@ -65,7 +93,7 @@ export default function OnlinePage() {
 
     socket.on("connect", () => {
       setPhase("queue");
-      socket.emit("queue:join", { name: trimmed });
+      socket.emit("queue:join", { name: trimmed, timeControlMs });
     });
 
     socket.on("queue:waiting", () => {
@@ -77,24 +105,11 @@ export default function OnlinePage() {
       const side = payload.you ?? null;
       youRef.current = side;
       setYou(side);
-      setState(payload.state);
-      setPlayers(payload.players);
-      setSelected(
-        payload.state.chainFrom && side && payload.state.turn === side
-          ? payload.state.chainFrom
-          : null,
-      );
+      applyRoom(payload);
     });
 
     socket.on("game:state", (payload: RoomPayload) => {
-      setState(payload.state);
-      setPlayers(payload.players);
-      const side = youRef.current;
-      setSelected(
-        payload.state.chainFrom && side && payload.state.turn === side
-          ? payload.state.chainFrom
-          : null,
-      );
+      applyRoom(payload);
       if (payload.disconnected) {
         setStatusExtra(`${payload.disconnected} s’est déconnecté`);
       }
@@ -116,6 +131,19 @@ export default function OnlinePage() {
     setPhase("form");
   }
 
+  function rematchOnline() {
+    cleanupSocket();
+    setPhase("form");
+    setState(null);
+    setYou(null);
+    youRef.current = null;
+    setPlayers([]);
+    setSelected(null);
+    setError(null);
+    setStatusExtra(undefined);
+    setServerClocks(null);
+  }
+
   function handleMove(from: Position, to: Position) {
     setError(null);
     socketRef.current?.emit("game:move", { from, to });
@@ -135,11 +163,14 @@ export default function OnlinePage() {
     !state.winner &&
     state.turn === you;
 
+  const cadenceLabel =
+    TIME_CONTROLS.find((c) => c.ms === timeControlMs)?.label ?? "Sans limite";
+
   return (
     <main className="page play">
       <header className="play__header">
         <h1>Partie en ligne</h1>
-        <p>Matchmaking rapide contre un autre joueur.</p>
+        <p>Jouer en ligne contre un autre joueur.</p>
       </header>
 
       {phase === "form" && (
@@ -155,6 +186,27 @@ export default function OnlinePage() {
               required
             />
           </div>
+          <fieldset className="field play__time">
+            <legend>Cadence</legend>
+            <div className="play__time-options" role="radiogroup" aria-label="Cadence">
+              {TIME_CONTROLS.map((opt) => {
+                const id = `online-time-${opt.ms ?? "none"}`;
+                const selected = timeControlMs === opt.ms;
+                return (
+                  <label key={id} className={`play__time-option ${selected ? "is-selected" : ""}`}>
+                    <input
+                      type="radio"
+                      name="online-time"
+                      value={opt.ms ?? ""}
+                      checked={selected}
+                      onChange={() => setTimeControlMs(opt.ms)}
+                    />
+                    {opt.label}
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
           <button type="submit" className="btn btn--primary">
             Trouver une partie
           </button>
@@ -165,7 +217,7 @@ export default function OnlinePage() {
       {phase === "queue" && (
         <div className="play__queue">
           <div className="play__spinner" aria-hidden="true" />
-          <p>Recherche d’un adversaire…</p>
+          <p>Recherche d’un adversaire ({cadenceLabel})…</p>
           <button type="button" className="btn btn--secondary" onClick={cancelQueue}>
             Annuler
           </button>
@@ -179,8 +231,10 @@ export default function OnlinePage() {
             southName={southName}
             northName={northName}
             you={you}
+            clocks={clocks}
             statusExtra={statusExtra}
             onForfeit={canPlay ? handleForfeit : undefined}
+            onRematchOnline={rematchOnline}
             onEndChain={canPlay && state.chainFrom ? handleEndChain : undefined}
           />
           <Board

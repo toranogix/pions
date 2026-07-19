@@ -2,9 +2,12 @@ import { randomUUID } from "node:crypto";
 import {applyMove, createInitialState, endChain, getAllLegalMoves, type GameState, type Player, type Position} from "@12pions/shared";
 import { recordResult } from "./db.js";
 
+export type TimeControlMs = number | null;
+
 export interface QueuedPlayer {
   socketId: string;
   name: string;
+  timeControlMs: TimeControlMs;
 }
 
 export interface RoomPlayer {
@@ -13,35 +16,60 @@ export interface RoomPlayer {
   side: Player;
 }
 
+export interface Clocks {
+  south: number;
+  north: number;
+}
+
 export interface Room {
   id: string;
   players: RoomPlayer[];
   state: GameState;
   scored: boolean;
+  timeControlMs: TimeControlMs;
+  clocks: Clocks | null;
+  turnStartedAt: number | null;
 }
 
 const queue: QueuedPlayer[] = [];
 const rooms = new Map<string, Room>();
 const socketToRoom = new Map<string, string>();
 
+const VALID_TIME_CONTROLS = new Set([3 * 60 * 1000, 10 * 60 * 1000]);
+
+export function normalizeTimeControl(value: unknown): TimeControlMs {
+  if (value == null || value === "" || value === 0) return null;
+  const n = Number(value);
+  if (!VALID_TIME_CONTROLS.has(n)) return null;
+  return n;
+}
+
 export function getQueueLength(): number {
   return queue.length;
 }
 
-export function enqueue(socketId: string, name: string): { waiting: true } | { matched: Room } {
-  // Remove if already queued
+export function enqueue(
+  socketId: string,
+  name: string,
+  timeControlMs: TimeControlMs = null,
+): { waiting: true } | { matched: Room } {
   const idx = queue.findIndex((q) => q.socketId === socketId);
   if (idx >= 0) queue.splice(idx, 1);
 
-  queue.push({ socketId, name: name.trim().slice(0, 24) || "Anonyme" });
+  const player: QueuedPlayer = {
+    socketId,
+    name: name.trim().slice(0, 24) || "Anonyme",
+    timeControlMs,
+  };
 
-  if (queue.length >= 2) {
-    const a = queue.shift()!;
-    const b = queue.shift()!;
-    const room = createRoom(a, b);
+  const matchIdx = queue.findIndex((q) => q.timeControlMs === timeControlMs);
+  if (matchIdx >= 0) {
+    const opponent = queue.splice(matchIdx, 1)[0]!;
+    const room = createRoom(opponent, player, timeControlMs);
     return { matched: room };
   }
 
+  queue.push(player);
   return { waiting: true };
 }
 
@@ -50,7 +78,7 @@ export function leaveQueue(socketId: string): void {
   if (idx >= 0) queue.splice(idx, 1);
 }
 
-function createRoom(a: QueuedPlayer, b: QueuedPlayer): Room {
+function createRoom(a: QueuedPlayer, b: QueuedPlayer, timeControlMs: TimeControlMs): Room {
   const id = randomUUID();
   const southFirst = Math.random() < 0.5;
   const players: RoomPlayer[] = southFirst
@@ -63,11 +91,15 @@ function createRoom(a: QueuedPlayer, b: QueuedPlayer): Room {
         { socketId: b.socketId, name: b.name, side: "south" },
       ];
 
+  const now = Date.now();
   const room: Room = {
     id,
     players,
     state: createInitialState("south"),
     scored: false,
+    timeControlMs,
+    clocks: timeControlMs == null ? null : { south: timeControlMs, north: timeControlMs },
+    turnStartedAt: timeControlMs == null ? null : now,
   };
 
   rooms.set(id, room);
@@ -86,6 +118,38 @@ export function getRoom(id: string): Room | undefined {
   return rooms.get(id);
 }
 
+function liveClocks(room: Room, at = Date.now()): Clocks | null {
+  if (!room.clocks) return null;
+  const clocks = { ...room.clocks };
+  if (room.turnStartedAt != null && !room.state.winner) {
+    const elapsed = Math.max(0, at - room.turnStartedAt);
+    const side = room.state.turn;
+    clocks[side] = Math.max(0, clocks[side] - elapsed);
+  }
+  return clocks;
+}
+
+function flagCurrentPlayer(room: Room, at = Date.now()): boolean {
+  if (!room.clocks || room.turnStartedAt == null || room.state.winner) return false;
+  const side = room.state.turn;
+  const remaining = room.clocks[side] - Math.max(0, at - room.turnStartedAt);
+  if (remaining > 0) return false;
+  room.clocks[side] = 0;
+  const winner = side === "south" ? "north" : "south";
+  room.state = { ...room.state, winner, chainFrom: null, lastJumpDir: null };
+  room.turnStartedAt = null;
+  maybeScore(room);
+  return true;
+}
+
+/** Deduct elapsed time from the player who just finished their turn */
+function passClock(room: Room, previousTurn: Player, at = Date.now()): void {
+  if (!room.clocks || room.turnStartedAt == null) return;
+  const elapsed = Math.max(0, at - room.turnStartedAt);
+  room.clocks[previousTurn] = Math.max(0, room.clocks[previousTurn] - elapsed);
+  room.turnStartedAt = room.state.winner ? null : at;
+}
+
 export function playMove(
   socketId: string,
   from: Position,
@@ -101,10 +165,19 @@ export function playMove(
     return { ok: false, error: "Ce n'est pas votre tour" };
   }
 
+  if (flagCurrentPlayer(room)) {
+    return { ok: true, room };
+  }
+
+  const previousTurn = room.state.turn;
   try {
     room.state = applyMove(room.state, { from, to });
   } catch {
     return { ok: false, error: "Coup illégal" };
+  }
+
+  if (room.clocks && (room.state.turn !== previousTurn || room.state.winner)) {
+    passClock(room, previousTurn);
   }
 
   maybeScore(room);
@@ -127,10 +200,19 @@ export function endPlayerChain(
     return { ok: false, error: "Aucune chaîne à terminer" };
   }
 
+  if (flagCurrentPlayer(room)) {
+    return { ok: true, room };
+  }
+
+  const previousTurn = room.state.turn;
   try {
     room.state = endChain(room.state);
   } catch {
     return { ok: false, error: "Impossible de terminer la chaîne" };
+  }
+
+  if (room.clocks && (room.state.turn !== previousTurn || room.state.winner)) {
+    passClock(room, previousTurn);
   }
 
   maybeScore(room);
@@ -158,6 +240,7 @@ export function forfeit(
 
   const winnerSide = forfeiter.side === "south" ? "north" : "south";
   room.state = { ...room.state, winner: winnerSide, chainFrom: null };
+  room.turnStartedAt = null;
   maybeScore(room);
   return { room, forfeiter };
 }
@@ -172,14 +255,12 @@ export function disconnectSocket(socketId: string): {
   socketToRoom.delete(socketId);
 
   if (result) {
-    // Keep room briefly so opponent sees result; remove mapping for leaver
     return result;
   }
 
   if (roomId) {
     const room = rooms.get(roomId);
-    if (room && room.players.every((p) => p.socketId !== socketId || true)) {
-      // If both gone, delete
+    if (room) {
       const stillConnected = room.players.some((p) => socketToRoom.has(p.socketId));
       if (!stillConnected && room.state.winner) {
         rooms.delete(roomId);
@@ -188,6 +269,17 @@ export function disconnectSocket(socketId: string): {
   }
 
   return {};
+}
+
+/** Check all timed games for flag falls; returns rooms that changed */
+export function checkTimeouts(): Room[] {
+  const updated: Room[] = [];
+  for (const room of rooms.values()) {
+    if (flagCurrentPlayer(room)) {
+      updated.push(room);
+    }
+  }
+  return updated;
 }
 
 export function roomPayload(room: Room) {
@@ -199,5 +291,7 @@ export function roomPayload(room: Room) {
       side: p.side,
     })),
     legalMoveCount: getAllLegalMoves(room.state).length,
+    timeControlMs: room.timeControlMs,
+    clocks: liveClocks(room),
   };
 }

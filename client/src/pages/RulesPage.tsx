@@ -26,8 +26,9 @@ export default function RulesPage() {
         <li>
           <strong>Dame.</strong> Un pion qui atteint la dernière ligne adverse
           est promu. La dame glisse de plusieurs cases en ligne droite (H/V),
-          dans toutes les directions — y compris en arrière — et capture de la
-          même façon.
+          dans toutes les directions — y compris en arrière. Pour capturer, elle
+          saute un pion adverse et peut atterrir sur n’importe quelle case libre
+          derrière lui, tant que le chemin reste libre.
         </li>
         <li>
           <strong>Victoire.</strong> Capturez tous les pions adverses, ou

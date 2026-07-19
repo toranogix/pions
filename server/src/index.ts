@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Server } from "socket.io";
 import { getLeaderboard, recordAiResult } from "./db.js";
-import {disconnectSocket, enqueue, endPlayerChain, forfeit, getQueueLength, leaveQueue, playMove, roomPayload} from "./matchmaking.js";
+import {checkTimeouts, disconnectSocket, enqueue, endPlayerChain, forfeit, getQueueLength, leaveQueue, normalizeTimeControl, playMove, roomPayload} from "./matchmaking.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3001;
@@ -50,12 +50,13 @@ const io = new Server(httpServer, {
 });
 
 io.on("connection", (socket) => {
-  socket.on("queue:join", (payload: { name?: string }) => {
+  socket.on("queue:join", (payload: { name?: string; timeControlMs?: number | null }) => {
     leaveQueue(socket.id);
-    const result = enqueue(socket.id, payload?.name ?? "Anonyme");
+    const timeControlMs = normalizeTimeControl(payload?.timeControlMs);
+    const result = enqueue(socket.id, payload?.name ?? "Anonyme", timeControlMs);
 
     if ("waiting" in result) {
-      socket.emit("queue:waiting", { position: getQueueLength() });
+      socket.emit("queue:waiting", { position: getQueueLength(), timeControlMs });
       return;
     }
 
@@ -112,6 +113,12 @@ io.on("connection", (socket) => {
     }
   });
 });
+
+setInterval(() => {
+  for (const room of checkTimeouts()) {
+    io.to(room.id).emit("game:state", roomPayload(room));
+  }
+}, 250);
 
 httpServer.listen(PORT, () => {
   console.log(`12 Pions server on http://localhost:${PORT}`);
