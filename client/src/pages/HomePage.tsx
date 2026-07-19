@@ -7,7 +7,7 @@ export default function HomePage() {
       <div className="home__atmosphere" aria-hidden="true" />
       <section className="home__hero">
         <p className="home__brand">12 Pions</p>
-        <h1 className="home__title">Jeux de plateau</h1>
+        <h1 className="home__title">Jeu de plateau</h1>
         <p className="home__lede">
           Affrontez un adversaire en ligne pour augmenter votre classement ou entrainez vous contre l’ordinateur.
         </p>
