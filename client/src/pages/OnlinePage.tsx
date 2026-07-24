@@ -239,7 +239,7 @@ export default function OnlinePage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={24}
-              placeholder="Ex. Awa"
+              placeholder="Ex. Maro"
               required
             />
           </div>

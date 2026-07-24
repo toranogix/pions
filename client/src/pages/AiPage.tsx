@@ -165,7 +165,7 @@ export default function AiPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={24}
-              placeholder="Ex. Moussa"
+              placeholder="Ex. Maro"
             />
           </div>
           <fieldset className="field play__time">
