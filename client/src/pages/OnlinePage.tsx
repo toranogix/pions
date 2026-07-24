@@ -9,6 +9,9 @@ import "./PlayPage.css";
 
 type Phase = "form" | "queue" | "game";
 
+/** Must match server QUEUE_TIMEOUT_MS */
+const QUEUE_TIMEOUT_MS = 3 * 60 * 1000;
+
 interface RoomPlayer {
   name: string;
   side: Player;
@@ -24,6 +27,23 @@ interface RoomPayload {
   timeControlMs?: number | null;
 }
 
+function getClientId(): string {
+  const key = "12pions:clientId";
+  let id = localStorage.getItem(key);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(key, id);
+  }
+  return id;
+}
+
+function formatQueueRemaining(ms: number): string {
+  const total = Math.max(0, Math.ceil(ms / 1000));
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 export default function OnlinePage() {
   const [name, setName] = useState(() => localStorage.getItem("12pions:name") ?? "");
   const [timeControlMs, setTimeControlMs] = useState<number | null>(3 * 60 * 1000);
@@ -36,8 +56,12 @@ export default function OnlinePage() {
   const [statusExtra, setStatusExtra] = useState<string | undefined>();
   const [serverClocks, setServerClocks] = useState<Clocks | null>(null);
   const [clockSync, setClockSync] = useState(0);
+  const [queueEndsAt, setQueueEndsAt] = useState<number | null>(null);
+  const [queueRemainingMs, setQueueRemainingMs] = useState(QUEUE_TIMEOUT_MS);
   const socketRef = useRef<Socket | null>(null);
   const youRef = useRef<Player | null>(null);
+  /** Prevents re-joining the queue after a mid-game reconnect */
+  const intentRef = useRef<"idle" | "queue" | "game">("idle");
 
   const southName = useMemo(
     () => players.find((p) => p.side === "south")?.name ?? "Sud",
@@ -62,6 +86,16 @@ export default function OnlinePage() {
 
   useEffect(() => () => cleanupSocket(), [cleanupSocket]);
 
+  useEffect(() => {
+    if (phase !== "queue" || queueEndsAt == null) return;
+    const tick = () => {
+      setQueueRemainingMs(Math.max(0, queueEndsAt - Date.now()));
+    };
+    tick();
+    const id = window.setInterval(tick, 250);
+    return () => window.clearInterval(id);
+  }, [phase, queueEndsAt]);
+
   function applyRoom(payload: RoomPayload) {
     setState(payload.state);
     setPlayers(payload.players);
@@ -75,6 +109,15 @@ export default function OnlinePage() {
     );
   }
 
+  function resetToForm(message?: string) {
+    intentRef.current = "idle";
+    cleanupSocket();
+    setPhase("form");
+    setQueueEndsAt(null);
+    setQueueRemainingMs(QUEUE_TIMEOUT_MS);
+    if (message) setError(message);
+  }
+
   function joinQueue(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = name.trim().slice(0, 24) || "Anonyme";
@@ -83,8 +126,12 @@ export default function OnlinePage() {
     setError(null);
     setStatusExtra(undefined);
     setServerClocks(null);
+    setQueueEndsAt(Date.now() + QUEUE_TIMEOUT_MS);
+    setQueueRemainingMs(QUEUE_TIMEOUT_MS);
 
+    intentRef.current = "queue";
     cleanupSocket();
+    const clientId = getClientId();
     const socket = io(serverUrl || undefined, {
       path: "/socket.io",
       transports: ["websocket", "polling"],
@@ -92,15 +139,25 @@ export default function OnlinePage() {
     socketRef.current = socket;
 
     socket.on("connect", () => {
+      if (intentRef.current !== "queue") return;
       setPhase("queue");
-      socket.emit("queue:join", { name: trimmed, timeControlMs });
+      socket.emit("queue:join", { name: trimmed, timeControlMs, clientId });
     });
 
     socket.on("queue:waiting", () => {
+      if (intentRef.current !== "queue") return;
       setPhase("queue");
     });
 
+    socket.on("queue:timeout", (payload: { message?: string }) => {
+      resetToForm(
+        payload?.message ?? "Aucun adversaire trouvé. Réessayez plus tard.",
+      );
+    });
+
     socket.on("game:matched", (payload: RoomPayload) => {
+      intentRef.current = "game";
+      setQueueEndsAt(null);
       setPhase("game");
       const side = payload.you ?? null;
       youRef.current = side;
@@ -120,18 +177,17 @@ export default function OnlinePage() {
     });
 
     socket.on("connect_error", () => {
-      setError("Connexion au serveur impossible");
-      setPhase("form");
+      resetToForm("Connexion au serveur impossible");
     });
   }
 
   function cancelQueue() {
     socketRef.current?.emit("queue:leave");
-    cleanupSocket();
-    setPhase("form");
+    resetToForm();
   }
 
   function rematchOnline() {
+    intentRef.current = "idle";
     cleanupSocket();
     setPhase("form");
     setState(null);
@@ -142,6 +198,7 @@ export default function OnlinePage() {
     setError(null);
     setStatusExtra(undefined);
     setServerClocks(null);
+    setQueueEndsAt(null);
   }
 
   function handleMove(from: Position, to: Position) {
@@ -218,6 +275,9 @@ export default function OnlinePage() {
         <div className="play__queue">
           <div className="play__spinner" aria-hidden="true" />
           <p>Recherche d’un adversaire ({cadenceLabel})…</p>
+          <p className="play__queue-timer" aria-live="polite">
+            Temps restant : {formatQueueRemaining(queueRemainingMs)}
+          </p>
           <button type="button" className="btn btn--secondary" onClick={cancelQueue}>
             Annuler
           </button>
@@ -236,16 +296,17 @@ export default function OnlinePage() {
             onForfeit={you && !state.winner ? handleForfeit : undefined}
             onRematchOnline={rematchOnline}
             onEndChain={canPlay && state.chainFrom ? handleEndChain : undefined}
-          />
-          <Board
-            state={state}
-            interactive={canPlay}
-            perspective={you ?? "south"}
-            selected={selected}
-            onSelect={setSelected}
-            onMove={handleMove}
-            highlightSide={you}
-          />
+          >
+            <Board
+              state={state}
+              interactive={canPlay}
+              perspective={you ?? "south"}
+              selected={selected}
+              onSelect={setSelected}
+              onMove={handleMove}
+              highlightSide={you}
+            />
+          </GameChrome>
           {error && <p className="play__error">{error}</p>}
         </div>
       )}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, startTransition, useCallback } from "react";
-import { applyMove, chooseAiMove, createInitialState, endChain, type GameState, type Player, type Position} from "@12pions/shared";
+import {AI_LEVELS, applyMove, chooseAiMove, createInitialState, endChain, type AiDifficulty, type GameState, type Player, type Position} from "@12pions/shared";
 import Board from "../components/Board";
 import GameChrome from "../components/GameChrome";
 import { apiUrl } from "../config";
@@ -9,17 +9,29 @@ import "./PlayPage.css";
 const HUMAN: Player = "south";
 const AI: Player = "north";
 
+const DIFFICULTY_ORDER: AiDifficulty[] = ["easy", "medium", "hard", "master"];
+
+function loadDifficulty(): AiDifficulty {
+  const saved = localStorage.getItem("12pions:aiDifficulty");
+  if (saved && saved in AI_LEVELS) return saved as AiDifficulty;
+  return "medium";
+}
+
 export default function AiPage() {
   const [name, setName] = useState(() => localStorage.getItem("12pions:name") ?? "");
   const [timeControlMs, setTimeControlMs] = useState<number | null>(3 * 60 * 1000);
+  const [difficulty, setDifficulty] = useState<AiDifficulty>(loadDifficulty);
   const [started, setStarted] = useState(false);
   const [state, setState] = useState<GameState>(() => createInitialState(HUMAN));
   const [selected, setSelected] = useState<Position | null>(null);
   const [thinking, setThinking] = useState(false);
   const [gameKey, setGameKey] = useState(0);
   const scoredRef = useRef(false);
+  const difficultyRef = useRef(difficulty);
+  difficultyRef.current = difficulty;
 
   const humanName = name.trim() || "Vous";
+  const level = AI_LEVELS[difficulty];
 
   const handleTimeout = useCallback((loser: Player) => {
     setState((prev) => {
@@ -43,6 +55,7 @@ export default function AiPage() {
     e.preventDefault();
     const trimmed = name.trim().slice(0, 24);
     if (trimmed) localStorage.setItem("12pions:name", trimmed);
+    localStorage.setItem("12pions:aiDifficulty", difficulty);
     setName(trimmed);
     scoredRef.current = false;
     setState(createInitialState(HUMAN));
@@ -97,9 +110,10 @@ export default function AiPage() {
     if (!started || state.winner || state.turn !== AI) return;
 
     let cancelled = false;
+    const currentLevel = AI_LEVELS[difficultyRef.current];
     setThinking(true);
     const timer = window.setTimeout(() => {
-      const move = chooseAiMove(state, 3);
+      const move = chooseAiMove(state, difficultyRef.current);
       if (cancelled || !move) {
         setThinking(false);
         return;
@@ -111,7 +125,7 @@ export default function AiPage() {
       } finally {
         if (!cancelled) setThinking(false);
       }
-    }, 450);
+    }, currentLevel.thinkMs);
 
     return () => {
       cancelled = true;
@@ -155,6 +169,28 @@ export default function AiPage() {
             />
           </div>
           <fieldset className="field play__time">
+            <legend>Niveau</legend>
+            <div className="play__time-options" role="radiogroup" aria-label="Niveau">
+              {DIFFICULTY_ORDER.map((key) => {
+                const opt = AI_LEVELS[key];
+                const id = `ai-level-${key}`;
+                const selected = difficulty === key;
+                return (
+                  <label key={id} className={`play__time-option ${selected ? "is-selected" : ""}`}>
+                    <input
+                      type="radio"
+                      name="ai-level"
+                      value={key}
+                      checked={selected}
+                      onChange={() => setDifficulty(key)}
+                    />
+                    {opt.label}
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+          <fieldset className="field play__time">
             <legend>Cadence</legend>
             <div className="play__time-options" role="radiogroup" aria-label="Cadence">
               {TIME_CONTROLS.map((opt) => {
@@ -186,23 +222,24 @@ export default function AiPage() {
           <GameChrome
             state={state}
             southName={humanName}
-            northName="Ordinateur"
+            northName={`Ordinateur · ${level.label}`}
             you={HUMAN}
             clocks={clocks}
             // statusExtra={thinking ? "L’ordi réfléchit…" : undefined}
             onForfeit={!state.winner ? handleForfeit : undefined}
             onNewGame={newGame}
             onEndChain={canPlay && state.chainFrom ? handleEndChain : undefined}
-          />
-          <Board
-            state={state}
-            interactive={canPlay}
-            perspective={HUMAN}
-            selected={selected}
-            onSelect={setSelected}
-            onMove={handleMove}
-            highlightSide={HUMAN}
-          />
+          >
+            <Board
+              state={state}
+              interactive={canPlay}
+              perspective={HUMAN}
+              selected={selected}
+              onSelect={setSelected}
+              onMove={handleMove}
+              highlightSide={HUMAN}
+            />
+          </GameChrome>
         </div>
       )}
     </main>

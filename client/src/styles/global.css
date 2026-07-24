@@ -2,8 +2,8 @@
   --sand: #c3bbae;
   --clay: #a5978c;
   --cocoa: #5c4742;
-  --terracotta: #8c5b4c;
-  --burgundy: #5a2a26;
+  --terracotta: #ffffff;
+  --burgundy: #000000;
 
   --bg: var(--sand);
   --text: var(--cocoa);
@@ -42,6 +42,12 @@ body,
 #root {
   min-height: 100%;
   margin: 0;
+}
+
+#root {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
 }
 
 html {

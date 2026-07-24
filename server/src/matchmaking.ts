@@ -4,10 +4,15 @@ import { recordResult } from "./db.js";
 
 export type TimeControlMs = number | null;
 
+/** Max time to wait for a match */
+export const QUEUE_TIMEOUT_MS = 3 * 60 * 1000;
+
 export interface QueuedPlayer {
   socketId: string;
+  clientId: string;
   name: string;
   timeControlMs: TimeControlMs;
+  joinedAt: number;
 }
 
 export interface RoomPlayer {
@@ -48,21 +53,37 @@ export function getQueueLength(): number {
   return queue.length;
 }
 
+function normalizeClientId(value: unknown): string {
+  if (typeof value !== "string") return "";
+  return value.trim().slice(0, 64);
+}
+
 export function enqueue(
   socketId: string,
   name: string,
   timeControlMs: TimeControlMs = null,
+  clientIdRaw: unknown = "",
 ): { waiting: true } | { matched: Room } {
-  const idx = queue.findIndex((q) => q.socketId === socketId);
-  if (idx >= 0) queue.splice(idx, 1);
+  const clientId = normalizeClientId(clientIdRaw) || socketId;
+
+  for (let i = queue.length - 1; i >= 0; i--) {
+    const q = queue[i]!;
+    if (q.socketId === socketId || q.clientId === clientId) {
+      queue.splice(i, 1);
+    }
+  }
 
   const player: QueuedPlayer = {
     socketId,
+    clientId,
     name: name.trim().slice(0, 24) || "Anonyme",
     timeControlMs,
+    joinedAt: Date.now(),
   };
 
-  const matchIdx = queue.findIndex((q) => q.timeControlMs === timeControlMs);
+  const matchIdx = queue.findIndex(
+    (q) => q.timeControlMs === timeControlMs && q.clientId !== clientId,
+  );
   if (matchIdx >= 0) {
     const opponent = queue.splice(matchIdx, 1)[0]!;
     const room = createRoom(opponent, player, timeControlMs);
@@ -76,6 +97,19 @@ export function enqueue(
 export function leaveQueue(socketId: string): void {
   const idx = queue.findIndex((q) => q.socketId === socketId);
   if (idx >= 0) queue.splice(idx, 1);
+}
+
+/** Remove players who waited longer than QUEUE_TIMEOUT_MS */
+export function expireQueue(now = Date.now()): string[] {
+  const expired: string[] = [];
+  for (let i = queue.length - 1; i >= 0; i--) {
+    const q = queue[i]!;
+    if (now - q.joinedAt >= QUEUE_TIMEOUT_MS) {
+      expired.push(q.socketId);
+      queue.splice(i, 1);
+    }
+  }
+  return expired;
 }
 
 function createRoom(a: QueuedPlayer, b: QueuedPlayer, timeControlMs: TimeControlMs): Room {

@@ -1,7 +1,6 @@
 .home {
   position: relative;
-  min-height: calc(100vh - 4rem);
-  min-height: calc(100dvh - 4rem);
+  flex: 1;
   display: grid;
   place-items: center;
   overflow: hidden;

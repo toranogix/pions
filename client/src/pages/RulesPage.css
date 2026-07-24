@@ -26,7 +26,7 @@
 .rules__list li {
   padding-left: 1.75rem;
   position: relative;
-  color: var(--cocoa);
+  color: var(--burgundy);
 }
 
 .rules__list li::before {
@@ -37,7 +37,7 @@
   top: 0.1rem;
   font-family: var(--font-display);
   font-weight: 700;
-  color: var(--terracotta);
+  color: var(--burgundy);
 }
 
 .rules__list {

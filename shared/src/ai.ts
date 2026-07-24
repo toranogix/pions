@@ -4,6 +4,18 @@ import {applyMove, getAllLegalMoves, opponent, BOARD_SIZE} from "./game.js";
 const PAWN_VALUE = 10;
 const DAME_VALUE = 28;
 
+export type AiDifficulty = "easy" | "medium" | "hard" | "master";
+
+export const AI_LEVELS: Record<
+  AiDifficulty,
+  { label: string; depth: number; blunderChance: number; thinkMs: number }
+> = {
+  easy: { label: "Facile", depth: 1, blunderChance: 0.42, thinkMs: 280 },
+  medium: { label: "Moyen", depth: 2, blunderChance: 0.14, thinkMs: 400 },
+  hard: { label: "Difficile", depth: 4, blunderChance: 0, thinkMs: 550 },
+  master: { label: "Master", depth: 5, blunderChance: 0, thinkMs: 700 },
+};
+
 function evaluate(state: GameState, perspective: Player): number {
   if (state.winner === perspective) return 10_000;
   if (state.winner === opponent(perspective)) return -10_000;
@@ -100,18 +112,13 @@ function minimax(
   return best;
 }
 
-export function chooseAiMove(state: GameState, depth = 3): Move | null {
-  const moves = getAllLegalMoves(state);
-  if (moves.length === 0) return null;
-
+function scoreMoves(
+  state: GameState,
+  moves: Move[],
+  depth: number,
+): { move: Move; score: number }[] {
   const perspective = state.turn;
-  let bestMove = moves[0]!;
-  let bestScore = -Infinity;
-
-  // Shuffle lightly for variety among equal scores
-  const shuffled = [...moves].sort(() => Math.random() - 0.5);
-
-  for (const move of shuffled) {
+  return moves.map((move) => {
     const next = applyMove(state, move);
     const score = minimax(
       next,
@@ -121,11 +128,33 @@ export function chooseAiMove(state: GameState, depth = 3): Move | null {
       next.turn === perspective,
       perspective,
     );
-    if (score > bestScore) {
-      bestScore = score;
-      bestMove = move;
-    }
+    return { move, score };
+  });
+}
+
+export function chooseAiMove(
+  state: GameState,
+  difficulty: AiDifficulty | number = "medium",
+): Move | null {
+  const moves = getAllLegalMoves(state);
+  if (moves.length === 0) return null;
+
+  const level =
+    typeof difficulty === "number"
+      ? { depth: difficulty, blunderChance: 0 }
+      : AI_LEVELS[difficulty];
+
+  // Shuffle lightly for variety among equal scores
+  const shuffled = [...moves].sort(() => Math.random() - 0.5);
+  const ranked = scoreMoves(state, shuffled, level.depth).sort(
+    (a, b) => b.score - a.score,
+  );
+
+  if (level.blunderChance > 0 && Math.random() < level.blunderChance && ranked.length > 1) {
+    // Prefer a clearly weaker move when blundering
+    const weakPool = ranked.slice(Math.max(1, Math.floor(ranked.length / 2)));
+    return weakPool[Math.floor(Math.random() * weakPool.length)]!.move;
   }
 
-  return bestMove;
+  return ranked[0]!.move;
 }

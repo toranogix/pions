@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { GameState, Player } from "@12pions/shared";
 import { formatClock, type Clocks } from "../hooks/useTurnClock";
 import ConfirmModal from "./ConfirmModal";
@@ -16,6 +16,7 @@ interface GameChromeProps {
   onNewGame?: () => void;
   onRematchOnline?: () => void;
   onEndChain?: () => void;
+  children: ReactNode;
 }
 
 function sideLabel(side: Player, you?: Player | null) {
@@ -34,12 +35,12 @@ export default function GameChrome({
   onNewGame,
   onRematchOnline,
   onEndChain,
+  children,
 }: GameChromeProps) {
   const [confirmForfeit, setConfirmForfeit] = useState(false);
   const hasClocks = clocks != null;
-  // Opponent first so it sits above (mobile) / left of your strip
-  const sideOrder: Player[] =
-    you === "north" ? ["south", "north"] : ["north", "south"];
+  const top: Player = you === "north" ? "south" : "north";
+  const bottom: Player = you === "north" ? "north" : "south";
 
   function renderPlayer(side: Player, name: string) {
     const active = state.turn === side && !state.winner;
@@ -53,12 +54,14 @@ export default function GameChrome({
           active ? "is-active" : ""
         } ${low ? "is-low" : ""} ${empty ? "is-flag" : ""}`}
       >
-        <span className={`chrome__swatch chrome__swatch--${side}`} />
-        <div className="chrome__player-meta">
-          <strong>{name}</strong>
-          <small>
-            {sideLabel(side, you)} · capturés {state.captured[side]}
-          </small>
+        <div className="chrome__player-info">
+          <span className={`chrome__swatch chrome__swatch--${side}`} />
+          <div className="chrome__player-meta">
+            <strong>{name}</strong>
+            <small>
+              {sideLabel(side, you)} · capturés {state.captured[side]}
+            </small>
+          </div>
         </div>
         {hasClocks && (
           <time
@@ -80,11 +83,11 @@ export default function GameChrome({
 
   return (
     <div className="chrome">
-      <div className="chrome__players">
-        {sideOrder.map((side) =>
-          renderPlayer(side, side === "south" ? southName : northName),
-        )}
-      </div>
+      {renderPlayer(top, top === "south" ? southName : northName)}
+
+      <div className="chrome__board">{children}</div>
+
+      {renderPlayer(bottom, bottom === "south" ? southName : northName)}
 
       {statusExtra && !state.winner && (
         <p className="chrome__status">{statusExtra}</p>

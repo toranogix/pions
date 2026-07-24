@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Server } from "socket.io";
 import { getLeaderboard, recordAiResult } from "./db.js";
-import {checkTimeouts, disconnectSocket, enqueue, endPlayerChain, forfeit, getQueueLength, leaveQueue, normalizeTimeControl, playMove, roomPayload} from "./matchmaking.js";
+import {checkTimeouts, disconnectSocket, enqueue, endPlayerChain, expireQueue, forfeit, getQueueLength, leaveQueue, normalizeTimeControl, playMove, roomPayload} from "./matchmaking.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3001;
@@ -50,28 +50,36 @@ const io = new Server(httpServer, {
 });
 
 io.on("connection", (socket) => {
-  socket.on("queue:join", (payload: { name?: string; timeControlMs?: number | null }) => {
-    leaveQueue(socket.id);
-    const timeControlMs = normalizeTimeControl(payload?.timeControlMs);
-    const result = enqueue(socket.id, payload?.name ?? "Anonyme", timeControlMs);
+  socket.on(
+    "queue:join",
+    (payload: { name?: string; timeControlMs?: number | null; clientId?: string }) => {
+      leaveQueue(socket.id);
+      const timeControlMs = normalizeTimeControl(payload?.timeControlMs);
+      const result = enqueue(
+        socket.id,
+        payload?.name ?? "Anonyme",
+        timeControlMs,
+        payload?.clientId,
+      );
 
-    if ("waiting" in result) {
-      socket.emit("queue:waiting", { position: getQueueLength(), timeControlMs });
-      return;
-    }
-
-    const room = result.matched;
-    for (const p of room.players) {
-      const s = io.sockets.sockets.get(p.socketId);
-      if (s) {
-        s.join(room.id);
-        s.emit("game:matched", {
-          ...roomPayload(room),
-          you: p.side,
-        });
+      if ("waiting" in result) {
+        socket.emit("queue:waiting", { position: getQueueLength(), timeControlMs });
+        return;
       }
-    }
-  });
+
+      const room = result.matched;
+      for (const p of room.players) {
+        const s = io.sockets.sockets.get(p.socketId);
+        if (s) {
+          s.join(room.id);
+          s.emit("game:matched", {
+            ...roomPayload(room),
+            you: p.side,
+          });
+        }
+      }
+    },
+  );
 
   socket.on("queue:leave", () => {
     leaveQueue(socket.id);
@@ -119,6 +127,15 @@ setInterval(() => {
     io.to(room.id).emit("game:state", roomPayload(room));
   }
 }, 250);
+
+setInterval(() => {
+  for (const socketId of expireQueue()) {
+    const s = io.sockets.sockets.get(socketId);
+    s?.emit("queue:timeout", {
+      message: "Aucun adversaire trouvé. Réessayez plus tard.",
+    });
+  }
+}, 1000);
 
 httpServer.listen(PORT, () => {
   console.log(`12 Pions server on http://localhost:${PORT}`);
