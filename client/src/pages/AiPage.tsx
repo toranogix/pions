@@ -31,7 +31,7 @@ export default function AiPage() {
   difficultyRef.current = difficulty;
 
   const humanName = name.trim() || "Vous";
-  const level = AI_LEVELS[difficulty];
+  // const level = AI_LEVELS[difficulty];
 
   const handleTimeout = useCallback((loser: Player) => {
     setState((prev) => {
