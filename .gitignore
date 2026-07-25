@@ -7,3 +7,5 @@ data/*.db
 client/dist
 server/dist
 shared/dist
+.vercel
+.env*
