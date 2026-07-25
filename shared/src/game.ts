@@ -28,7 +28,7 @@ export interface Move {
 export interface GameState {
   board: Board;
   turn: Player;
-  /** When set, player must continue a capture chain from this square */
+  /** When set, player may continue a capture chain from this square */
   chainFrom: Position | null;
   /** Direction of last jump in chain (to forbid 180° reverse) */
   lastJumpDir: Position | null;

@@ -1,5 +1,5 @@
 import type { GameState, Move, Player } from "./game.js";
-import {applyMove, getAllLegalMoves, opponent, BOARD_SIZE} from "./game.js";
+import {applyMove, endChain, getAllLegalMoves, opponent, BOARD_SIZE} from "./game.js";
 
 const PAWN_VALUE = 10;
 const DAME_VALUE = 28;
@@ -149,6 +149,26 @@ export function chooseAiMove(
   const ranked = scoreMoves(state, shuffled, level.depth).sort(
     (a, b) => b.score - a.score,
   );
+
+  // Mid-chain: also consider stopping voluntarily
+  if (state.chainFrom) {
+    try {
+      const stopped = endChain(state);
+      const stopScore = minimax(
+        stopped,
+        level.depth - 1,
+        -Infinity,
+        Infinity,
+        stopped.turn === state.turn,
+        state.turn,
+      );
+      if (stopScore > (ranked[0]?.score ?? -Infinity)) {
+        return null; // signal caller to end the chain
+      }
+    } catch {
+      // ignore
+    }
+  }
 
   if (level.blunderChance > 0 && Math.random() < level.blunderChance && ranked.length > 1) {
     // Prefer a clearly weaker move when blundering

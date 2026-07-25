@@ -9,6 +9,8 @@ interface BoardProps {
   selected: Position | null;
   onSelect: (pos: Position | null) => void;
   onMove: (from: Position, to: Position) => void;
+  /** Voluntarily stop a capture chain (click away from further jumps) */
+  onEndChain?: () => void;
   highlightSide?: Player | null;
 }
 
@@ -19,6 +21,7 @@ export default function Board({
   selected,
   onSelect,
   onMove,
+  onEndChain,
   highlightSide,
 }: BoardProps) {
   const legal: Move[] =
@@ -50,7 +53,10 @@ export default function Board({
     if (state.chainFrom) {
       if (samePos(pos, state.chainFrom)) {
         onSelect(pos);
+        return;
       }
+      // Click elsewhere = stop the chain voluntarily
+      onEndChain?.();
       return;
     }
 

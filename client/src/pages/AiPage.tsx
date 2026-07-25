@@ -114,11 +114,18 @@ export default function AiPage() {
     setThinking(true);
     const timer = window.setTimeout(() => {
       const move = chooseAiMove(state, difficultyRef.current);
-      if (cancelled || !move) {
+      if (cancelled) {
         setThinking(false);
         return;
       }
       try {
+        if (!move) {
+          if (state.chainFrom) {
+            setState(endChain(state));
+            setSelected(null);
+          }
+          return;
+        }
         const next = applyMove(state, move);
         setState(next);
         setSelected(next.chainFrom && next.turn === HUMAN ? next.chainFrom : null);
@@ -222,13 +229,12 @@ export default function AiPage() {
           <GameChrome
             state={state}
             southName={humanName}
-            northName={`Ordinateur · ${level.label}`}
+            northName= "Ordinateur"
             you={HUMAN}
             clocks={clocks}
             // statusExtra={thinking ? "L’ordi réfléchit…" : undefined}
             onForfeit={!state.winner ? handleForfeit : undefined}
             onNewGame={newGame}
-            onEndChain={canPlay && state.chainFrom ? handleEndChain : undefined}
           >
             <Board
               state={state}
@@ -237,6 +243,7 @@ export default function AiPage() {
               selected={selected}
               onSelect={setSelected}
               onMove={handleMove}
+              onEndChain={canPlay && state.chainFrom ? handleEndChain : undefined}
               highlightSide={HUMAN}
             />
           </GameChrome>

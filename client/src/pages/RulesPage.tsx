@@ -14,19 +14,20 @@ export default function RulesPage() {
         <li>
           <strong>Déplacement.</strong> Un pion avance d’une case vers le camp
           adverse, ou latéralement. Il ne peut pas reculer. Pas de diagonale.
-          Vous choisissez librement le pion à jouer — aucune prise n’est forcée.
+          Vous choisissez librement le pion à jouer, aucune prise n’est forcée.
         </li>
         <li>
           <strong>Capture.</strong> Sautez un pion adverse vers la case libre
           située derrière lui (vers l’avant ou sur le côté, jamais en
           reculant). Les prises en chaîne sont autorisées, sans revenir en
-          arrière dans la même chaîne. Vous pouvez terminer une chaîne
-          volontairement.
+          arrière dans la même chaîne. Continuer ou arrêter la chaîne est
+          libre : <strong>cliquez sur une case de prise pour enchaîner ou sur une autre case pour
+          passer le tour</strong>.
         </li>
         <li>
           <strong>Dame.</strong> Un pion qui atteint la dernière ligne adverse
           est promu. La dame glisse de plusieurs cases en ligne droite (H/V),
-          dans toutes les directions — y compris en arrière. Pour capturer, elle
+          dans toutes les directions, y compris en arrière. Pour capturer, elle
           saute un pion adverse et peut atterrir sur n’importe quelle case libre
           derrière lui, tant que le chemin reste libre.
         </li>

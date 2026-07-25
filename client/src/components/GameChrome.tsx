@@ -15,7 +15,6 @@ interface GameChromeProps {
   onForfeit?: () => void;
   onNewGame?: () => void;
   onRematchOnline?: () => void;
-  onEndChain?: () => void;
   children: ReactNode;
 }
 
@@ -34,7 +33,6 @@ export default function GameChrome({
   onForfeit,
   onNewGame,
   onRematchOnline,
-  onEndChain,
   children,
 }: GameChromeProps) {
   const [confirmForfeit, setConfirmForfeit] = useState(false);
@@ -94,11 +92,6 @@ export default function GameChrome({
       )}
 
       <div className="chrome__actions">
-        {onEndChain && state.chainFrom && !state.winner && (
-          <button type="button" className="btn btn--secondary" onClick={onEndChain}>
-            Terminer la chaîne
-          </button>
-        )}
         {onForfeit && !state.winner && (
           <button
             type="button"

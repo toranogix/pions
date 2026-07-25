@@ -295,7 +295,6 @@ export default function OnlinePage() {
             statusExtra={statusExtra}
             onForfeit={you && !state.winner ? handleForfeit : undefined}
             onRematchOnline={rematchOnline}
-            onEndChain={canPlay && state.chainFrom ? handleEndChain : undefined}
           >
             <Board
               state={state}
@@ -304,6 +303,7 @@ export default function OnlinePage() {
               selected={selected}
               onSelect={setSelected}
               onMove={handleMove}
+              onEndChain={canPlay && state.chainFrom ? handleEndChain : undefined}
               highlightSide={you}
             />
           </GameChrome>
